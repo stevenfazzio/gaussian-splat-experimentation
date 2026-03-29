@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Prevent libomp duplicate initialization crash (Homebrew + PyTorch both link it)
+export KMP_DUPLICATE_LIB_OK=TRUE
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 OPENSPLAT="$SCRIPT_DIR/opensplat/build/opensplat"
