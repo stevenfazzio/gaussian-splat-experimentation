@@ -1,0 +1,18 @@
+# Gaussian splat binary files (large)
+*.ply
+*.splat
+*.spz
+*.ksplat
+
+# Training data and built tools
+training/datasets/*/
+training/opensplat/
+
+# Captured scenes
+capture/scenes/*/
+
+# macOS
+.DS_Store
+
+# Node (just in case)
+node_modules/
