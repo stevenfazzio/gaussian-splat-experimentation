@@ -49,6 +49,10 @@ python3 scripts/align-splat.py <in.ply> <cameras.json> <out.ply>   # rotate to Y
 - `scene-info.py`: Reads PLY vertex positions, computes trimmed-median center, writes `scene-info.json`.
 - `align-splat.py`: Rotates PLY so scene up -> +Y, recenters to origin, transforms cameras.json alongside.
 
+## Documentation
+
+- `README.md`: User-facing project overview, quickstart, and structure. Keep in sync with changes to the pipeline or viewers.
+
 ## Important Conventions
 
 - Splat binary files (`.ply`, `.splat`, `.spz`, `.ksplat`) are gitignored. So are `training/datasets/*/`, `training/opensplat/`, and `capture/scenes/*/`.
