@@ -86,7 +86,7 @@
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.1;
-  controls.rotateSpeed = 1.0;
+  controls.rotateSpeed = 0.35;
   controls.target.set(0, 0, 0);
 
   // --- Resize handling ---
@@ -182,7 +182,133 @@
   // --- Load initial splat ---
   const params = new URLSearchParams(window.location.search);
   const splatUrl = params.get("url") || "https://sparkjs.dev/assets/splats/butterfly.spz";
+
+  // Set up camera from cameras.json
+  async function setupCamera(splatUrl) {
+    if (splatUrl.startsWith("http") && !splatUrl.startsWith("http://localhost")) return;
+    const dir = splatUrl.substring(0, splatUrl.lastIndexOf("/") + 1);
+    try {
+      const resp = await fetch(dir + "cameras.json");
+      if (!resp.ok) return;
+      const cameras = await resp.json();
+      if (!Array.isArray(cameras) || cameras.length === 0) return;
+
+      // Use first camera's exact position
+      camera.position.set(...cameras[0].position);
+
+      // Camera centroid
+      let cx = 0, cy = 0, cz = 0;
+      for (const c of cameras) {
+        cx += c.position[0]; cy += c.position[1]; cz += c.position[2];
+      }
+      cx /= cameras.length; cy /= cameras.length; cz /= cameras.length;
+
+      // Gaze intersection — least-squares closest point to all camera forward rays
+      const A = [[0,0,0],[0,0,0],[0,0,0]];
+      const b = [0, 0, 0];
+      for (const c of cameras) {
+        const Rc = c.rotation;
+        const p = c.position;
+        const d = [Rc[0][2], Rc[1][2], Rc[2][2]];
+        const dlen = Math.sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]);
+        d[0] /= dlen; d[1] /= dlen; d[2] /= dlen;
+        for (let i = 0; i < 3; i++) {
+          for (let j = 0; j < 3; j++) {
+            const Pij = (i === j ? 1 : 0) - d[i] * d[j];
+            A[i][j] += Pij;
+            b[i] += Pij * p[j];
+          }
+        }
+      }
+      function det3(m) {
+        return m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])
+             - m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])
+             + m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+      }
+      function replaceCol(m, col, v) {
+        return m.map((row, i) => row.map((val, j) => j === col ? v[i] : val));
+      }
+      const detA = det3(A);
+      if (Math.abs(detA) < 1e-10) return; // degenerate camera arrangement
+      const gazeX = det3(replaceCol(A, 0, b)) / detA;
+      const gazeY = det3(replaceCol(A, 1, b)) / detA;
+      const gazeZ = det3(replaceCol(A, 2, b)) / detA;
+
+      // Target = gaze intersection (where cameras are looking)
+      controls.target.set(gazeX, gazeY, gazeZ);
+
+      // Up = direction from gaze point toward camera centroid
+      const ux = cx - gazeX, uy = cy - gazeY, uz = cz - gazeZ;
+      const ulen = Math.sqrt(ux*ux + uy*uy + uz*uz);
+      if (ulen < 1e-10) return; // centroid coincides with gaze point
+      camera.up.set(ux/ulen, uy/ulen, uz/ulen);
+
+      controls.update();
+
+      // --- Debug visualization ---
+      const t = controls.target.clone();
+
+      // Orbit target (white sphere)
+      const targetSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      targetSphere.position.copy(t);
+      scene.add(targetSphere);
+
+      // Up axis (green line)
+      const dbLen = 0.8;
+      scene.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([
+          t.clone().addScaledVector(camera.up, -dbLen),
+          t.clone().addScaledVector(camera.up, dbLen)
+        ]),
+        new THREE.LineBasicMaterial({ color: 0x00ff00 })
+      ));
+
+      // X axis (red), Y axis (yellow), Z axis (blue)
+      for (const [dir, color] of [
+        [[dbLen,0,0], 0xff0000], [[0,dbLen,0], 0xffff00], [[0,0,dbLen], 0x0000ff]
+      ]) {
+        scene.add(new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([
+            t.clone().sub(new THREE.Vector3(...dir)),
+            t.clone().add(new THREE.Vector3(...dir))
+          ]),
+          new THREE.LineBasicMaterial({ color })
+        ));
+      }
+
+      // Camera positions (cyan dots)
+      for (const cam of cameras) {
+        const dot = new THREE.Mesh(
+          new THREE.SphereGeometry(0.02),
+          new THREE.MeshBasicMaterial({ color: 0x00ffff })
+        );
+        dot.position.set(...cam.position);
+        scene.add(dot);
+      }
+
+      // Camera centroid (magenta sphere)
+      const centroidSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04),
+        new THREE.MeshBasicMaterial({ color: 0xff00ff })
+      );
+      centroidSphere.position.set(cx, cy, cz);
+      scene.add(centroidSphere);
+
+      // Gaze intersection (orange sphere)
+      const gazeSphere = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04),
+        new THREE.MeshBasicMaterial({ color: 0xff8800 })
+      );
+      gazeSphere.position.set(gazeX, gazeY, gazeZ);
+      scene.add(gazeSphere);
+    } catch (e) { /* no cameras.json, use defaults */ }
+  }
+
   loadFromURL(splatUrl);
+  setupCamera(splatUrl);
 
   // --- Render loop ---
   renderer.setAnimationLoop(() => {
