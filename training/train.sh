@@ -74,6 +74,9 @@ mkdir -p "$OUTPUT_DIR"
   -n "$ITERATIONS" \
   -o "$OUTPUT_FILE"
 
+# Trim outlier gaussians (distance, opacity, scale)
+python3 "$REPO_DIR/scripts/trim-splat.py" "$OUTPUT_FILE"
+
 # Compute scene center for the viewer
 python3 "$REPO_DIR/scripts/scene-info.py" "$OUTPUT_FILE"
 
@@ -83,4 +86,4 @@ echo "Output: $OUTPUT_FILE"
 echo ""
 echo "View your splat:"
 echo "  ./scripts/serve.sh"
-echo "  Open http://localhost:8080/viewer/?url=splats/${DATASET_NAME}.ply"
+echo "  Open http://localhost:8080/viewer/supersplat.html?url=splats/${DATASET_NAME}.ply"

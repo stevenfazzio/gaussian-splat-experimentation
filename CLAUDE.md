@@ -27,6 +27,7 @@ A macOS Apple Silicon project for learning 3D Gaussian Splatting. The pipeline g
 # Then open http://localhost:8080/viewer/
 
 # Post-processing scripts
+python3 scripts/trim-splat.py <file.ply> [output.ply]               # remove outlier gaussians (distance+opacity+scale)
 python3 scripts/scene-info.py <file.ply>                           # compute scene center -> scene-info.json
 python3 scripts/align-splat.py <in.ply> <cameras.json> <out.ply>   # rotate to Y-up + recenter
 ```
@@ -37,11 +38,14 @@ python3 scripts/align-splat.py <in.ply> <cameras.json> <out.ply>   # rotate to Y
 
 1. **Capture** (`capture/`): `run-colmap.sh` runs COLMAP feature extraction, matching, and sparse reconstruction. Input: `scenes/<name>/images/`. Output: `scenes/<name>/sparse/0/` (cameras.bin, images.bin, points3D.bin).
 
-2. **Training** (`training/`): `train.sh` runs OpenSplat (C++ binary at `training/opensplat/build/opensplat`) with `KMP_DUPLICATE_LIB_OK=TRUE` to avoid libomp crashes. Outputs `.ply` directly to `viewer/splats/`. Automatically runs `scene-info.py` post-training to generate `scene-info.json`.
+2. **Training** (`training/`): `train.sh` runs OpenSplat (C++ binary at `training/opensplat/build/opensplat`) with `KMP_DUPLICATE_LIB_OK=TRUE` to avoid libomp crashes. Outputs `.ply` directly to `viewer/splats/`. Automatically runs `trim-splat.py` (outlier removal) and `scene-info.py` post-training.
 
-3. **Viewer** (`viewer/index.html`): Single HTML file, no build step. Uses Three.js + Spark (SplatMesh) via CDN import maps. Supports `.ply`, `.splat`, `.spz`, `.ksplat` via URL param (`?url=splats/file.ply`) or drag-and-drop. Loads `cameras.json` and `scene-info.json` from the same directory as the splat to auto-configure orbit target and camera up direction. Currently includes debug visualization (axis lines, camera position dots).
+3. **Viewers** (`viewer/`):
+   - `index.html`: Debug viewer using Three.js + Spark (SplatMesh) via CDN. Supports `.ply`, `.splat`, `.spz`, `.ksplat` via `?url=splats/file.ply` or drag-and-drop. Loads `cameras.json` and `scene-info.json` for orbit target / up direction. Includes debug visualization (axis lines, camera dots).
+   - `supersplat.html`: Production viewer using PlayCanvas SuperSplat via CDN. Auto-computes orbit center and camera orientation from splat bounding box. Usage: `http://localhost:8080/viewer/supersplat.html?url=splats/my-scene.ply`. Also supports `?noui`, `?settings=<url>`.
 
 **Post-processing scripts** (`scripts/`):
+- `trim-splat.py`: Removes outlier gaussians using distance, opacity, and scale filters. Run automatically by `train.sh`.
 - `scene-info.py`: Reads PLY vertex positions, computes trimmed-median center, writes `scene-info.json`.
 - `align-splat.py`: Rotates PLY so scene up -> +Y, recenters to origin, transforms cameras.json alongside.
 
