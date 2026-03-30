@@ -234,8 +234,16 @@
       const gazeY = det3(replaceCol(A, 1, b)) / detA;
       const gazeZ = det3(replaceCol(A, 2, b)) / detA;
 
-      // Target = gaze intersection (where cameras are looking)
-      controls.target.set(gazeX, gazeY, gazeZ);
+      // Target: prefer scene-info.json (PLY-derived center), fall back to gaze intersection
+      let targetX = gazeX, targetY = gazeY, targetZ = gazeZ;
+      try {
+        const infoResp = await fetch(dir + "scene-info.json");
+        if (infoResp.ok) {
+          const info = await infoResp.json();
+          [targetX, targetY, targetZ] = info.center;
+        }
+      } catch (e) { /* use gaze intersection */ }
+      controls.target.set(targetX, targetY, targetZ);
 
       // Up = direction from gaze point toward camera centroid
       const ux = cx - gazeX, uy = cy - gazeY, uz = cz - gazeZ;

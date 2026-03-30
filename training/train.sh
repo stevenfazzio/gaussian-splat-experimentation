@@ -74,6 +74,9 @@ mkdir -p "$OUTPUT_DIR"
   -n "$ITERATIONS" \
   -o "$OUTPUT_FILE"
 
+# Compute scene center for the viewer
+python3 "$REPO_DIR/scripts/scene-info.py" "$OUTPUT_FILE"
+
 echo ""
 echo "=== Training complete! ==="
 echo "Output: $OUTPUT_FILE"
