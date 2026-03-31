@@ -40,9 +40,9 @@ python3 scripts/align-splat.py <in.ply> <cameras.json> <out.ply>   # rotate to Y
 
 2. **Training** (`training/`): `train.sh` runs OpenSplat (C++ binary at `training/opensplat/build/opensplat`) with `KMP_DUPLICATE_LIB_OK=TRUE` to avoid libomp crashes. Outputs `.ply` directly to `viewer/splats/`. Automatically runs `trim-splat.py` (outlier removal) and `scene-info.py` post-training.
 
-3. **Viewers** (`viewer/`):
-   - `index.html`: Debug viewer using Three.js + Spark (SplatMesh) via CDN. Supports `.ply`, `.splat`, `.spz`, `.ksplat` via `?url=splats/file.ply` or drag-and-drop. Loads `cameras.json` and `scene-info.json` for orbit target / up direction. Includes debug visualization (axis lines, camera dots).
-   - `supersplat.html`: Production viewer using PlayCanvas SuperSplat via CDN. Auto-computes orbit center and camera orientation from splat bounding box. Usage: `http://localhost:8080/viewer/supersplat.html?url=splats/my-scene.ply`. Also supports `?noui`, `?settings=<url>`.
+3. **Viewer** (`viewer/`):
+   - `index.html`: Redirects to `supersplat.html` with query params preserved.
+   - `supersplat.html`: Viewer using PlayCanvas SuperSplat via CDN. Auto-computes orbit center and camera orientation from splat bounding box. Usage: `http://localhost:8080/viewer/?url=splats/my-scene.ply`. Also supports `?noui`, `?settings=<url>`.
 
 **Post-processing scripts** (`scripts/`):
 - `trim-splat.py`: Removes outlier gaussians using distance, opacity, and scale filters. Run automatically by `train.sh`.
