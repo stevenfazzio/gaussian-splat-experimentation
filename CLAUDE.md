@@ -26,10 +26,10 @@ A macOS Apple Silicon project for learning 3D Gaussian Splatting. The pipeline g
 ./scripts/serve.sh
 # Then open http://localhost:8080/viewer/
 
-# Post-processing scripts
-python3 scripts/trim-splat.py <file.ply> [output.ply]               # remove outlier gaussians (distance+opacity+scale)
-python3 scripts/scene-info.py <file.ply>                           # compute scene center -> scene-info.json
-python3 scripts/align-splat.py <in.ply> <cameras.json> <out.ply>   # rotate to Y-up + recenter
+# Analysis scripts (requires: pip install umap-learn plotly)
+python3 scripts/umap-splat.py <file.ply>                            # UMAP embedding of splat parameters -> interactive HTML
+python3 scripts/umap-splat.py <file.ply> --features shape           # embed shape only (scale+rotation)
+python3 scripts/umap-splat.py <file.ply> --color-by opacity         # color by opacity instead of position
 ```
 
 ## Architecture
@@ -44,10 +44,8 @@ python3 scripts/align-splat.py <in.ply> <cameras.json> <out.ply>   # rotate to Y
    - `index.html`: Redirects to `supersplat.html` with query params preserved.
    - `supersplat.html`: Viewer using PlayCanvas SuperSplat via CDN. Auto-computes orbit center and camera orientation from splat bounding box. Usage: `http://localhost:8080/viewer/?url=splats/my-scene.ply`. Also supports `?noui`, `?settings=<url>`.
 
-**Post-processing scripts** (`scripts/`):
-- `trim-splat.py`: Removes outlier gaussians using distance, opacity, and scale filters. Run automatically by `train.sh`.
-- `scene-info.py`: Reads PLY vertex positions, computes trimmed-median center, writes `scene-info.json`.
-- `align-splat.py`: Rotates PLY so scene up -> +Y, recenters to origin, transforms cameras.json alongside.
+**Analysis scripts** (`scripts/`):
+- `umap-splat.py`: UMAP dimensionality reduction on non-positional Gaussian parameters. Embeds shape (scale+rotation), appearance (SH+opacity), or combined features into 2D. Outputs interactive Plotly HTML. Supports coloring by spatial position, opacity, or scale.
 
 ## Documentation
 
@@ -59,4 +57,4 @@ python3 scripts/align-splat.py <in.ply> <cameras.json> <out.ply>   # rotate to Y
 - Training output always goes to `viewer/splats/` so it's immediately viewable.
 - The viewer requires a local HTTP server (ES module imports don't work over `file://`).
 - OpenSplat is built with `-DGPU_RUNTIME=MPS` for Metal acceleration.
-- Python scripts require `numpy` (used by both `scene-info.py` and `align-splat.py`).
+- Python scripts require `numpy`. Analysis scripts additionally require `umap-learn` and `plotly`.
